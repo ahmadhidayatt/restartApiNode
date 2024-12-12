@@ -149,4 +149,4 @@ else
 fi
 
 echo "Server setup is complete!"
-echo "You can now run 'docker-compose up' to start the application."
+echo "You can now run 'node server.js &' to start the application."
