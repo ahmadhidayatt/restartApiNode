@@ -17,16 +17,18 @@ npm init -y
 # Install dependensi yang diperlukan
 echo "Installing express..."
 npm install express
+npm install cors
 
 # Buat server.js dengan menulis seluruh kode sekaligus
 echo "Creating server.js..."
 cat << 'EOF' > server.js
 import express from 'express';
 import { exec } from 'child_process';
+import cors from 'cors';
 
 const app = express();
 const PORT = process.env.PORT || 1100;
-
+app.use(cors());
 app.get('/run-cron', (req, res) => {
   const startTime = new Date().toISOString();  // Waktu saat request diterima
   console.log(`[${startTime}] Received request to run cron job`);
@@ -78,7 +80,6 @@ app.get('/run-cron', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
 
 EOF
 
