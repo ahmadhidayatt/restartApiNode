@@ -13,9 +13,9 @@ NODE_VERSION=$(node -v)
 echo "Detected Node.js version: $NODE_VERSION"
 
 # Tentukan apakah kita bisa menggunakan import atau harus menggunakan require
-if [[ "$NODE_VERSION" > "v14" ]]; then
+if [[ "$NODE_VERSION" > "v12" ]]; then
   MODULE_SYNTAX="import"
-  echo "Node.js version is 14 or above, using 'import' syntax."
+  echo "Node.js version is 12 or above, using 'import' syntax."
 else
   MODULE_SYNTAX="require"
   echo "Node.js version is below 14, using 'require' syntax."
