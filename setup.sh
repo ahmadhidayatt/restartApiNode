@@ -11,7 +11,7 @@ echo "import express from 'express';" > server.js
 echo "import { exec } from 'child_process';" >> server.js
 echo "
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 1100;
 
 app.get('/run-cron', (req, res) => {
   const cronCommand = 'sudo /etc/init.d/cron restart';  // Ganti dengan perintah cron yang sesuai
