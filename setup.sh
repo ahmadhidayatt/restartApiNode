@@ -3,14 +3,12 @@
 # Menentukan direktori tempat skrip dijalankan
 DIR=$(pwd)
 
-# Install npm, Docker, dan Docker Compose
-echo "Installing npm, Docker, and Docker Compose..."
+# Install npm
+echo "Installing npm"
 sudo apt update
-sudo apt install -y npm docker.io docker-compose
+sudo apt install -y npm 
 
-# Menentukan Docker service dan memastikan Docker berjalan
-echo "Starting Docker service..."
-sudo systemctl enable --now docker
+
 
 # Buat package.json otomatis
 echo "Creating package.json..."
@@ -97,56 +95,9 @@ else
   echo "Error: package.json creation failed."
 fi
 
-# Buat Dockerfile
-echo "Creating Dockerfile..."
-cat << 'EOF' > Dockerfile
-# Gunakan image Node.js yang sudah ada
-FROM node:18
 
-# Tentukan direktori kerja dalam container
-WORKDIR /usr/src/app
 
-# Salin file package.json dan install dependensi
-COPY package*.json ./
-RUN npm install
 
-# Salin semua file proyek ke dalam container
-COPY . .
-
-# Expose port 1100
-EXPOSE 1100
-
-# Jalankan aplikasi dengan perintah node
-CMD ["node", "server.js"]
-EOF
-
-# Buat file docker-compose.yml
-echo "Creating docker-compose.yml..."
-cat << 'EOF' > docker-compose.yml
-version: '3'
-services:
-  app:
-    build: .
-    ports:
-      - "1100:1100"
-    volumes:
-      - .:/usr/src/app
-    environment:
-      - NODE_ENV=production
-EOF
-
-# Verifikasi Dockerfile dan docker-compose.yml telah dibuat
-if [ -f "Dockerfile" ]; then
-  echo "Dockerfile has been created successfully!"
-else
-  echo "Error: Dockerfile creation failed."
-fi
-
-if [ -f "docker-compose.yml" ]; then
-  echo "docker-compose.yml has been created successfully!"
-else
-  echo "Error: docker-compose.yml creation failed."
-fi
 
 echo "Server setup is complete!"
 echo "You can now run 'nohup node server.js &' to start the application."
