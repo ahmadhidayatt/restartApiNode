@@ -40,40 +40,41 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 1100;
 app.use(cors());
+
+// API untuk menjalankan cron job
 app.get('/run-cron', (req, res) => {
-  const startTime = new Date().toISOString();  // Waktu saat request diterima
+  const startTime = new Date().toISOString();
   console.log(`[${startTime}] Received request to run cron job`);
 
   // Mendapatkan perintah cron dari crontab
   exec('crontab -l', (error, stdout, stderr) => {
     if (error) {
-      const errorTime = new Date().toISOString();  // Waktu saat terjadi error
+      const errorTime = new Date().toISOString();
       console.error(`[${errorTime}] Error fetching crontab: ${error.message}`);
       return res.status(500).json({ error: error.message });
     }
     if (stderr) {
-      const stderrTime = new Date().toISOString();  // Waktu saat stderr
+      const stderrTime = new Date().toISOString();
       console.error(`[${stderrTime}] Error in crontab: ${stderr}`);
       return res.status(500).json({ error: stderr });
     }
 
-    // Ambil hanya perintah dari crontab, abaikan waktu dan jadwal
     const cronCommand = stdout.trim().split('\n')
-      .map(line => line.split(' ').slice(5).join(' '))  // Ambil perintah cron setelah jadwal
-      .join(' && '); // Gabungkan perintah cron jika ada lebih dari satu
+      .map(line => line.split(' ').slice(5).join(' '))
+      .join(' && ');
 
     if (!cronCommand) {
-      const noCommandTime = new Date().toISOString();  // Waktu jika tidak ada perintah dalam crontab
+      const noCommandTime = new Date().toISOString();
       console.error(`[${noCommandTime}] No command found in crontab`);
       return res.status(500).json({ error: 'No command found in crontab' });
     }
 
-    const runningTime = new Date().toISOString();  // Waktu saat perintah cron mulai dijalankan
+    const runningTime = new Date().toISOString();
     console.log(`[${runningTime}] Running cron command: ${cronCommand}`);
 
     // Jalankan perintah cron
     exec(cronCommand, (execError, execStdout, execStderr) => {
-      const finishTime = new Date().toISOString();  // Waktu selesai menjalankan perintah
+      const finishTime = new Date().toISOString();
       if (execError) {
         console.error(`[${finishTime}] Error executing cron command: ${execError.message}`);
         return res.status(500).json({ error: execError.message });
@@ -88,63 +89,71 @@ app.get('/run-cron', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
-EOF
-else
-cat << 'EOF' > server.js
-const express = require('express');
-const { exec } = require('child_process');
-const cors = require('cors');
+// API untuk menjalankan docker-compose down dan up
+app.get('/run-docker-compose', (req, res) => {
+  const { port } = req.query;  // Mendapatkan port dari parameter request
 
-const app = express();
-const PORT = process.env.PORT || 1100;
-app.use(cors());
-app.get('/run-cron', (req, res) => {
-  const startTime = new Date().toISOString();  // Waktu saat request diterima
-  console.log(`[${startTime}] Received request to run cron job`);
+  if (!port) {
+    return res.status(400).json({ error: 'Port parameter is required' });
+  }
 
-  // Mendapatkan perintah cron dari crontab
-  exec('crontab -l', (error, stdout, stderr) => {
+  let adjustedPort;
+  if (port.length === 4) {
+    adjustedPort = parseInt(port) - 3001;  // Jika panjang 4 digit, kurangi dengan 3001
+  } else if (port.length === 5) {
+    adjustedPort = parseInt(port) - 31001;  // Jika panjang 5 digit, kurangi dengan 31001
+  } else {
+    return res.status(400).json({ error: 'Invalid port length' });
+  } // Kurangi port dengan 3001
+
+  if (isNaN(adjustedPort)) {
+    return res.status(400).json({ error: 'Invalid port parameter' });
+  }
+
+  const startTime = new Date().toISOString();
+  console.log(`[${startTime}] Received request to run docker-compose commands for port: ${port}`);
+
+  // Perintah untuk mendapatkan working directory dari container
+  exec(`docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' $(docker ps -q) | head -n 1`, (error, stdout, stderr) => {
     if (error) {
-      const errorTime = new Date().toISOString();  // Waktu saat terjadi error
-      console.error(`[${errorTime}] Error fetching crontab: ${error.message}`);
+      const errorTime = new Date().toISOString();
+      console.error(`[${errorTime}] Error fetching docker-compose working directory: ${error.message}`);
       return res.status(500).json({ error: error.message });
     }
     if (stderr) {
-      const stderrTime = new Date().toISOString();  // Waktu saat stderr
-      console.error(`[${stderrTime}] Error in crontab: ${stderr}`);
+      const stderrTime = new Date().toISOString();
+      console.error(`[${stderrTime}] Error in docker inspect: ${stderr}`);
       return res.status(500).json({ error: stderr });
     }
 
-    // Ambil hanya perintah dari crontab, abaikan waktu dan jadwal
-    const cronCommand = stdout.trim().split('\n')
-      .map(line => line.split(' ').slice(5).join(' '))  // Ambil perintah cron setelah jadwal
-      .join(' && '); // Gabungkan perintah cron jika ada lebih dari satu
+    const workingDir = stdout.trim();
+    console.log(`[${startTime}] Docker-compose working directory: ${workingDir}`);
 
-    if (!cronCommand) {
-      const noCommandTime = new Date().toISOString();  // Waktu jika tidak ada perintah dalam crontab
-      console.error(`[${noCommandTime}] No command found in crontab`);
-      return res.status(500).json({ error: 'No command found in crontab' });
-    }
-
-    const runningTime = new Date().toISOString();  // Waktu saat perintah cron mulai dijalankan
-    console.log(`[${runningTime}] Running cron command: ${cronCommand}`);
-
-    // Jalankan perintah cron
-    exec(cronCommand, (execError, execStdout, execStderr) => {
-      const finishTime = new Date().toISOString();  // Waktu selesai menjalankan perintah
-      if (execError) {
-        console.error(`[${finishTime}] Error executing cron command: ${execError.message}`);
-        return res.status(500).json({ error: execError.message });
+    // Jalankan perintah docker-compose down dan up
+    exec(`cd ${workingDir} && docker-compose -f docker-compose${adjustedPort}.yaml down`, (downError, downStdout, downStderr) => {
+      const downErrorTime = new Date().toISOString();
+      console.log(`docker-compose -f docker-compose${adjustedPort}.yaml down`);
+      if (downError) {
+        console.error(`[${downErrorTime}] Error executing docker-compose down: ${downError.message}`);
+       // return res.status(500).json({ error: downError.message });
       }
-      if (execStderr) {
-        console.error(`[${finishTime}] Error in execution: ${execStderr}`);
-        return res.status(500).json({ error: execStderr });
+      if (downStderr) {
+        console.error(`[${downErrorTime}] Error in docker-compose down: ${downStderr}`);
+       // return res.status(500).json({ error: downStderr });
       }
-      console.log(`[${finishTime}] Cron job executed successfully`);
-      res.json({ message: 'Cron job executed successfully', output: execStdout });
+
+      console.log(`[${startTime}] Docker-compose down executed successfully`);
+
+      // Setelah down berhasil, jalankan up
+      exec(`cd ${workingDir} && docker-compose -f docker-compose${adjustedPort}.yaml up -d`, (upError, upStdout, upStderr) => {
+        const finishTime = new Date().toISOString();
+        if (upError) {
+          console.error(`[${finishTime}] Error executing docker-compose up: ${upError.message}`);
+          return res.status(500).json({ error: upError.message });
+        }
+        console.log(`[${finishTime}] Docker-compose up executed successfully`);
+        res.json({ message: 'Docker-compose down and up executed successfully', output: upStdout });
+      });
     });
   });
 });
@@ -152,6 +161,7 @@ app.get('/run-cron', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
 EOF
 fi
 
